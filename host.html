@@ -38,9 +38,14 @@ window.addEventListener("message", function (event) {
 
   if (event.data.type === "booking_confirmed_string") {
     window.voiceflow.chat.interact({
-      type: "complete",
-      payload: event.data.data
-    });
+  type: "text",
+  payload: event.data.data
+});
+
+window.voiceflow.chat.interact({
+  type: "complete"
+});
+
   }
 });
 </script>
