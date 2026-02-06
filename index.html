@@ -25,11 +25,11 @@
 <body>
   <div class="card">
     <h3>📅 Book a WeWork Tour</h3>
-    
+
     <div id="buildingInfo" class="building-info" style="display:none">
       🏢 <span id="buildingName">Loading location...</span>
     </div>
-    
+
     <div id="loading" class="loading">Loading available slots…</div>
 
     <div id="form" style="display:none">
@@ -53,7 +53,6 @@
 
 <script>
 (async function(){
-  // Get parameters from URL
   const params = new URLSearchParams(location.search);
   const buildingId = params.get('building_id') || 'fdb15bdf-19e2-4abe-bd40-7b7fa9816fb5';
   const apiUrl = params.get('api') || 'https://api-lms.wework.co.in/api/tours/';
@@ -74,13 +73,12 @@
   let selectedSlot = null;
   let allSlots = [];
 
-  // Show building info if location name is provided
   if (locationName && locationName !== 'WeWork Location') {
     buildingNameEl.textContent = locationName;
     buildingInfoEl.style.display = 'block';
   }
 
-  function showError(msg){
+  function showError(){
     loadingEl.style.display='none';
     formEl.style.display='none';
     errorEl.style.display = 'block';
@@ -91,37 +89,20 @@
     `;
   }
 
-  // Fetch available slots from API
   async function fetchSlots(){
     const url = `${apiUrl}?building_id=${encodeURIComponent(buildingId)}`;
-    console.log('Fetching slots from:', url);
-    
-    const res = await fetch(url, { 
-      method: 'GET', 
-      headers: {'Content-Type':'application/json'} 
-    });
-    
-    if (!res.ok) {
-      throw new Error(`API returned ${res.status}: ${res.statusText}`);
-    }
-    
+    const res = await fetch(url);
+    if (!res.ok) throw new Error("API error");
     const data = await res.json();
-    
-    if (!data.success || !data.available_tour_times) {
-      throw new Error('No available tour times found for this location');
-    }
-    
+    if (!data.success || !data.available_tour_times) throw new Error("No slots");
     allSlots = data.available_tour_times;
     return groupSlotsByDate(allSlots);
   }
 
-  // Group slots by date
   function groupSlotsByDate(slots){
     const grouped = {};
     slots.forEach(slot => {
-      if (!grouped[slot.date]) {
-        grouped[slot.date] = [];
-      }
+      if (!grouped[slot.date]) grouped[slot.date] = [];
       grouped[slot.date].push(slot);
     });
     return grouped;
@@ -129,145 +110,74 @@
 
   function populateDates(slotsMap){
     dateSelect.innerHTML = '<option value="">— pick a date —</option>';
-    const dates = Object.keys(slotsMap).sort();
-    
-    dates.forEach(dateStr => {
+    Object.keys(slotsMap).sort().forEach(dateStr => {
+      const d = new Date(dateStr + 'T00:00:00');
       const opt = document.createElement('option');
-      const date = new Date(dateStr + 'T00:00:00');
-      const label = date.toLocaleDateString('en-US', { 
-        weekday:'long', 
-        day:'2-digit', 
-        month:'short', 
-        year:'numeric' 
-      });
       opt.value = dateStr;
-      opt.textContent = label;
+      opt.textContent = d.toLocaleDateString('en-US', {
+        weekday:'long', day:'2-digit', month:'short', year:'numeric'
+      });
       dateSelect.appendChild(opt);
     });
   }
 
   function renderTimesForDate(slotsMap, selectedDate){
     timeGrid.innerHTML = '';
-    const slots = slotsMap[selectedDate] || [];
-    
-    if (!slots.length) {
-      timeGrid.innerHTML = '<div style="grid-column:1 / -1; text-align:center; color:#666;">No slots available</div>';
-      return;
-    }
-    
-    slots.forEach(slot => {
-      const slotEl = document.createElement('div');
-      slotEl.className = 'slot';
-      slotEl.textContent = slot.start_time;
-      slotEl.onclick = () => selectSlot(slot, slotEl);
-      timeGrid.appendChild(slotEl);
+    (slotsMap[selectedDate] || []).forEach(slot => {
+      const div = document.createElement('div');
+      div.className = 'slot';
+      div.textContent = slot.start_time;
+      div.onclick = () => selectSlot(slot, div);
+      timeGrid.appendChild(div);
     });
   }
 
-  function selectSlot(slot, element) {
-    // Remove previous selection
+  function selectSlot(slot, el){
     document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
-    
-    // Add selection to clicked element
-    element.classList.add('selected');
+    el.classList.add('selected');
     selectedSlot = slot;
-    
-    // Show selected info
-    const date = new Date(slot.date + 'T00:00:00');
-    const dateStr = date.toLocaleDateString('en-US', { 
-      weekday:'long', 
-      day:'2-digit', 
-      month:'short', 
-      year:'numeric' 
-    });
-    
     selectedInfoEl.innerHTML = `
       <strong>✅ Selected Tour:</strong><br>
-      📅 ${dateStr}<br>
+      📅 ${slot.date}<br>
       🕐 ${slot.start_time} - ${slot.end_time}<br>
       🏢 WeWork
     `;
     selectedInfoEl.style.display = 'block';
-    
     bookBtn.disabled = false;
   }
 
-  // Initialize the widget
   try{
     const slotsMap = await fetchSlots();
-    
     loadingEl.style.display = 'none';
     formEl.style.display = 'block';
     populateDates(slotsMap);
 
-    // Date change listener
-    dateSelect.onchange = function(){
-      const selectedDate = dateSelect.value;
+    dateSelect.onchange = () => {
       selectedSlot = null;
       selectedInfoEl.style.display = 'none';
       bookBtn.disabled = true;
-      
-      if (!selectedDate) {
-        timesWrap.style.display = 'none';
-        return;
-      }
-      
-      renderTimesForDate(slotsMap, selectedDate);
+      if (!dateSelect.value) return (timesWrap.style.display='none');
+      renderTimesForDate(slotsMap, dateSelect.value);
       timesWrap.style.display = 'block';
     };
 
-    // Booking confirmation
-    bookBtn.onclick = function(){
-      if (!selectedSlot) return;
-      console.log("CONFIRM CLICK: sending postMessage to parent");
+    bookBtn.onclick = () => {
+      if (!selectedSlot || !window.parent) return;
 
-
-      // Send comprehensive booking data to Voiceflow
-      const bookingData = {
-        building_id: selectedSlot.building_id,
-        service_resource_id: selectedSlot.service_resource_id,
-        date: selectedSlot.date,
-        start_time: selectedSlot.start_time,
-        end_time: selectedSlot.end_time,
-        location_name: locationName,
-        formatted_date: new Date(selectedSlot.date + 'T00:00:00').toLocaleDateString('en-US', { 
-          weekday:'long', 
-          day:'2-digit', 
-          month:'short', 
-          year:'numeric' 
-        })
-      };
-
-      // Send to parent window (Voiceflow)
-      if (window.parent) {
-        // Send clean formatted message for display
-        const displayString = `✅ Tour Slot Selected!\n📅 ${bookingData.formatted_date}\n🕐 ${bookingData.start_time} - ${bookingData.end_time}`;
-        
-        // Also send data for API (hidden)
-        const apiData = {
-          building_id: bookingData.building_id,
-          service_resource_id: bookingData.service_resource_id,
-          date: bookingData.date,
-          start_time: bookingData.start_time,
-          end_time: bookingData.end_time
-        };
-        
-        window.parent.postMessage({
-          type: 'booking_confirmed_string',
-          data: displayString,
-          apiData: apiData
-        }, '*');
-        alert("Button clicked");
-
-      }
-
-      // Show confirmation
-    //  alert(`✅ Tour slot selected!\n📅 ${bookingData.formatted_date}\n🕐 ${selectedSlot.start_time}\n🏢 WeWork`);
+      window.parent.postMessage({
+        type: 'booking_confirmed',
+        payload: {
+          building_id: selectedSlot.building_id,
+          service_resource_id: selectedSlot.service_resource_id,
+          tour_date: selectedSlot.date,
+          start_time: selectedSlot.start_time,
+          end_time: selectedSlot.end_time
+        }
+      }, '*');
     };
 
-  }catch(err){
-    console.error('Booking widget error:', err);
-    showError(`Could not load available tour slots. ${err.message}`);
+  } catch {
+    showError();
   }
 })();
 </script>
