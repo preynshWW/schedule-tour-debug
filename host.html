@@ -3,52 +3,63 @@
 <head>
   <meta charset="utf-8" />
   <title>Voiceflow Host Debug</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 </head>
 <body>
 
 <h3>Voiceflow Host (Debug)</h3>
 
+<!-- ========================= -->
 <!-- Voiceflow Web Widget -->
+<!-- ========================= -->
 <script type="text/javascript">
   (function(d, t) {
-    var v = d.createElement(t), s = d.getElementsByTagName(t)[0];
+    var v = d.createElement(t);
+    var s = d.getElementsByTagName(t)[0];
+
     v.onload = function() {
       window.voiceflow.chat.load({
-        verify: { projectID: '698580c641335707881c48ac' },
-        url: 'https://general-runtime.voiceflow.com',
-        versionID: 'production',
+        verify: { projectID: "698580c641335707881c48ac" },
+        url: "https://general-runtime.voiceflow.com",
+        versionID: "production",
         voice: {
-          url: 'https://runtime-api.voiceflow.com'
+          url: "https://runtime-api.voiceflow.com"
         }
       });
     };
+
     v.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs";
     v.type = "text/javascript";
     s.parentNode.insertBefore(v, s);
-  })(document, 'script');
+  })(document, "script");
 </script>
 
-
-<!-- 🔑 THIS IS THE MISSING BRIDGE -->
+<!-- ========================= -->
+<!-- IFRAME → VOICEFLOW BRIDGE -->
+<!-- ========================= -->
 <script>
-window.addEventListener("message", function (event) {
-  if (!event.data || !event.data.type) return;
+window.addEventListener("message", function(event) {
+  if (!event || !event.data) return;
+
+  // 🔒 Optional safety check (can remove later)
+  // if (event.origin !== "https://preynshww.github.io") return;
 
   if (event.data.type === "booking_confirmed_string") {
-    // 1️⃣ Show confirmation message
+    console.log("HOST RECEIVED MESSAGE:", event.data);
+
+    // 1️⃣ Display message in chat (THIS IS REQUIRED ON WEB)
     window.voiceflow.chat.interact({
       type: "text",
       payload: event.data.data
     });
 
-    // 2️⃣ Advance flow
+    // 2️⃣ Tell Voiceflow input is complete → move flow forward
     window.voiceflow.chat.interact({
       type: "complete"
     });
   }
 });
 </script>
-
 
 </body>
 </html>
