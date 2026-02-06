@@ -219,6 +219,8 @@
     // Booking confirmation
     bookBtn.onclick = function(){
       if (!selectedSlot) return;
+      console.log("CONFIRM CLICK: sending postMessage to parent");
+
 
       // Send comprehensive booking data to Voiceflow
       const bookingData = {
@@ -255,6 +257,8 @@
           data: displayString,
           apiData: apiData
         }, '*');
+        alert("Button clicked");
+
       }
 
       // Show confirmation
