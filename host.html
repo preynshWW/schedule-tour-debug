@@ -10,45 +10,45 @@
 
 <!-- Voiceflow Web Widget -->
 <script type="text/javascript">
-    (function(d, t) {
-      var v = d.createElement(t), s = d.getElementsByTagName(t)[0];
-      v.onload = function() {
-        window.voiceflow.chat.load({
-          verify: { projectID: '698580c641335707881c48ac' },
-          url: 'https://general-runtime.voiceflow.com',
-          versionID: 'production',
-          voice: {
-            url: 'https://runtime-api.voiceflow.com'
-          }
-        });
-      };
-      v.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs";
-      v.type = "text/javascript";
-      s.parentNode.insertBefore(v, s);
-    })(document, 'script');
-  </script>
-  
+  (function(d, t) {
+    var v = d.createElement(t), s = d.getElementsByTagName(t)[0];
+    v.onload = function() {
+      window.voiceflow.chat.load({
+        verify: { projectID: '698580c641335707881c48ac' },
+        url: 'https://general-runtime.voiceflow.com',
+        versionID: 'production',
+        voice: {
+          url: 'https://runtime-api.voiceflow.com'
+        }
+      });
+    };
+    v.src = "https://cdn.voiceflow.com/widget-next/bundle.mjs";
+    v.type = "text/javascript";
+    s.parentNode.insertBefore(v, s);
+  })(document, 'script');
+</script>
+
 
 <!-- 🔑 THIS IS THE MISSING BRIDGE -->
 <script>
 window.addEventListener("message", function (event) {
   if (!event.data || !event.data.type) return;
 
-  console.log("HOST RECEIVED MESSAGE:", event.data);
-
   if (event.data.type === "booking_confirmed_string") {
+    // 1️⃣ Show confirmation message
     window.voiceflow.chat.interact({
-  type: "text",
-  payload: event.data.data
-});
+      type: "text",
+      payload: event.data.data
+    });
 
-window.voiceflow.chat.interact({
-  type: "complete"
-});
-
+    // 2️⃣ Advance flow
+    window.voiceflow.chat.interact({
+      type: "complete"
+    });
   }
 });
 </script>
+
 
 </body>
 </html>
